@@ -246,7 +246,7 @@ function face(ctx, x, y, s, { open = 1, col = CYAN, glow = 50, mouth = true, alp
   ctx.restore();
 }
 // tiny cat-eye used as a "node" / validator
-function eyeNode(ctx, x, y, r, open, gx, gy, col, ring) {
+function eyeNode(ctx, x, y, r, open, gx, gy, col, ring, fibers = false) {
   ctx.save(); ctx.translate(x, y);
   ctx.strokeStyle = ring; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, r + 7, 0, TAU); ctx.stroke();
   if (open < 0.06) {
@@ -259,9 +259,22 @@ function eyeNode(ctx, x, y, r, open, gx, gy, col, ring) {
   const px = gx * r * 0.45, py = gy * r * 0.3;
   ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 16;
   ctx.beginPath(); ctx.arc(px, py, r * 0.5, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
+  if (fibers) irisFibers(ctx, px, py, r * 0.5, r * 0.012);
   ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(px, py, r * 0.1, r * 0.38, 0, 0, TAU); ctx.fill();
   ctx.restore();
   ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, r, ry, 0, 0, TAU); ctx.stroke();
+  ctx.restore();
+}
+function irisFibers(ctx, x, y, R, lw) {
+  ctx.save(); ctx.lineWidth = lw; ctx.lineCap = 'round';
+  for (let k = 0; k < 140; k++) {
+    const a = (k / 140) * TAU + rnd(k, 61) * 0.04, r0 = R * (0.18 + rnd(k, 62) * 0.1), r1 = R * (0.7 + rnd(k, 63) * 0.3);
+    ctx.strokeStyle = k % 3 ? 'rgba(0,40,60,0.45)' : 'rgba(255,135,255,0.35)';
+    ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0);
+    ctx.quadraticCurveTo(x + Math.cos(a + 0.08) * (r0 + r1) / 2, y + Math.sin(a + 0.08) * (r0 + r1) / 2, x + Math.cos(a) * r1, y + Math.sin(a) * r1); ctx.stroke();
+  }
+  const g = ctx.createRadialGradient(x, y, R * 0.75, x, y, R); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(10,0,30,0.7)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.fill();
   ctx.restore();
 }
 function cursorShape(ctx, x, y, press, alpha) {
@@ -335,12 +348,14 @@ function drawView(i, cx, bottomY, h, { alpha = 1, rot = 0, filter = 'none', glow
 // 01 — determinism, eyes in the dark
 function s1(t) {
   bg(t, 0.6);
-  strands(S, edgeRoots, t, { alpha: 0.38, lenMul: 0.35 + 0.65 * eo3(seg(t, 0, 3)) });
+  strands(S, edgeRoots, t, { alpha: 0.38 + 0.25 * (1 - seg(t, 0, 0.8)), lenMul: 0.7 + 0.3 * eo3(seg(t, 0, 3)) + 0.6 * (1 - eo3(seg(t, 0, 0.5))), sway: 2.4 });
   const f = fr(t);
-  let ea = seg(t, 0.12, 0.45) * (1 - seg(t, 0.95, 1.3)) + (t > 2.3 && t < 2.62 ? 0.85 : 0);
-  if (rnd(f, 11) > 0.78) ea *= 0.25;
-  const blink = t > 0.68 && t < 0.8 ? 0.08 : 1;
-  face(S, 960 + (rnd(f, 5) - 0.5) * 6, 430, 1.2, { open: blink, alpha: ea, look: Math.sin(t * 3) * 0.6 });
+  let ea = (1 - seg(t, 0.95, 1.3)) + (t > 2.3 && t < 2.62 ? 0.85 : 0);
+  if (t > 0.3 && rnd(f, 11) > 0.78) ea *= 0.25;
+  // frame 0 = thumbnail: huge eyes mid-opening, then a creepy blink
+  const open = lerp(0.72, 1, eo3(seg(t, 0, 0.22))) * (t > TL.BLINK1 && t < TL.BLINK1 + 0.12 ? 0.08 : 1);
+  const fs = lerp(1.65, 1.2, eo3(seg(t, 0, 0.7)));
+  face(S, 960 + (rnd(f, 5) - 0.5) * 6, lerp(500, 430, eo3(seg(t, 0, 0.7))), fs, { open, alpha: ea, look: Math.sin(t * 3) * 0.6, glow: 70 });
   const T1 = TL.TYPE1, n = Math.floor(seg(t, T1.t0, T1.t1) * T1.text.length + 0.0001);
   const shake = seg(t, 2.5, 3.0);
   S.save(); S.translate((rnd(f, 21) - 0.5) * 18 * shake, (rnd(f, 22) - 0.5) * 8 * shake);
@@ -377,7 +392,8 @@ function s2(t0) {
     if (pop <= 0) continue;
     const hit = seg(t, wave(g), wave(g) + 0.18);
     S.save(); S.translate(g.x, g.y); S.scale(pop, pop);
-    const open = agree ? eo3(seg(t, 1.6, 1.72)) : 0;
+    const sb = TL.SYNC_BLINK - 3.0;
+    const open = agree ? eo3(seg(t, 1.6, 1.72)) * (1 - Math.sin(seg(t, sb, sb + 0.14) * Math.PI)) : 0;
     const ring = agree ? rgba(CYAN, 0.5) : hit > 0 && hit < 1 ? rgba(PINK, 0.9) : rgba(PURPLE, 0.45 + 0.4 * (hit >= 1));
     eyeNode(S, 0, 0, 24, open, gx, gy, agree ? CYAN : hit >= 1 ? PURPLE : rgba('#ffffff', 0.4), ring);
     if (hit > 0 && hit < 1) { S.strokeStyle = rgba(PINK, 1 - hit); S.lineWidth = 3; S.beginPath(); S.arc(0, 0, 31 + hit * 22, 0, TAU); S.stroke(); }
@@ -478,9 +494,20 @@ const ANSWERS = ['TRUE', 'FALSE', '0.73', 'MAYBE', '0x9c1e', '??', '0.41', 'NULL
 function s3b(t0) {
   const t = t0 - 9.6, f = fr(t0);
   bg(t0, 1.1);
-  strands(S, edgeRoots, t0, { alpha: 0.55, lenMul: 1.5, sway: 4, speed: 0.9 });
+  const IR = TL.IRIS, zp = seg(t0, IR.z0, IR.cut), stare = seg(t0, IR.z0 - 0.25, IR.z0);
+  strands(S, edgeRoots, t0, { alpha: 0.55 * (1 - zp), lenMul: 1.5, sway: 4, speed: 0.9 });
   const cols = [PINK, PURPLE, CYAN, '#ffffff'];
+  const tg = GRID[IR.node];
+  const z = Math.exp(Math.log(95) * Math.pow(zp, 2.4));
+  S.save();
+  S.translate(lerp(tg.x, 960, eio3(zp)), lerp(tg.y, 540, eio3(zp))); S.scale(z, z); S.translate(-tg.x, -tg.y);
   for (const g of GRID) {
+    if (g === tg && stare > 0) {
+      const sc2 = 1 + 0.35 * eo3(stare);
+      S.save(); S.translate(g.x, g.y); S.scale(sc2, sc2);
+      eyeNode(S, 0, 0, 24, 1, 0, 0, CYAN, rgba(CYAN, 0.6), true); S.restore();
+      continue;
+    }
     const step = Math.floor(t * 6 + rnd(g.i, 9) * 3);
     const jx = (rnd(g.i, step, 1) - 0.5) * 10, jy = (rnd(g.i, step, 2) - 0.5) * 10;
     const blink = rnd(g.i, step, 5) > 0.82 ? 0.05 : 1;
@@ -488,7 +515,8 @@ function s3b(t0) {
     eyeNode(S, g.x + jx, g.y + jy, 24, blink, rnd(g.i, step, 6) * 2 - 1, rnd(g.i, step, 7) * 2 - 1, col, rgba(col, 0.4));
     text(S, ANSWERS[Math.floor(rnd(g.i, step, 8) * ANSWERS.length)], g.x + jx, g.y + 44 + jy, '500 13px JB', rgba(col, 0.85));
   }
-  const a = eo3(seg(t, 0.1, 0.4));
+  S.restore();
+  const a = eo3(seg(t, 0.1, 0.4)) * (1 - seg(zp, 0, 0.3));
   S.globalAlpha = a;
   gtext(S, 'Perfect determinism', 960, 175, '700 86px SG', '#ffffff', 0.3 + 0.4 * rnd(f, 3), f);
   gtext(S, 'becomes much harder.', 960, 925, '700 92px SG', PINK, 0.4 + 0.5 * rnd(f, 4), f + 7, 'center', 30);
@@ -545,6 +573,17 @@ function s4(t0) {
     S.globalAlpha = 1;
   }
   hud(t0, '04 / GENVM', t < 1.45 ? 'SIGNAL: ???' : 'ENTITY: AWAKE');
+  const IR = TL.IRIS;
+  if (t0 < IR.open) {
+    const q = eio3(seg(t0, IR.cut, IR.open));
+    const rx = lerp(228, 1500, q), ry = lerp(866, 1500, q);
+    S.save();
+    S.beginPath(); S.rect(0, 0, W, H); S.ellipse(960, 540, rx, ry, 0, 0, TAU); S.clip('evenodd');
+    S.fillStyle = CYAN; S.fillRect(0, 0, W, H);
+    irisFibers(S, 960, 540, 12 * 95, 0.288 * 95);
+    S.restore();
+    S.save(); S.strokeStyle = '#000'; S.lineWidth = 40 * (1 - q); S.beginPath(); S.ellipse(960, 540, rx, ry, 0, 0, TAU); S.stroke(); S.restore();
+  }
 }
 
 // 05 — traditional vs intelligent contract
@@ -801,6 +840,33 @@ function s8(t0) {
   hud(t0, '08 / GENLAYER', 'REALITY: ON-CHAIN');
 }
 
+const wipeRoots = [];
+for (let i = 0; i < 5200; i++) {
+  const x = rnd(i, 41) * W, y = rnd(i, 42) * H;
+  const d = Math.hypot((x - W / 2) / (W / 2), (y - H / 2) / (H / 2)) / Math.SQRT2;
+  wipeRoots.push({ x, y, d, a: Math.atan2(H / 2 - y, W / 2 - x) + (rnd(i, 43) - 0.5) * 1.6, l: 60 + rnd(i, 44) * 160, c: Math.floor(rnd(i, 45) * 3) });
+}
+function wipeAmt(t) {
+  let c = 0;
+  for (const w of TL.WIPES) {
+    if (t >= w - 0.45 && t < w) c = Math.max(c, eio3(seg(t, w - 0.45, w)));
+    if (t >= w && t < w + 0.5) c = Math.max(c, 1 - eo3(seg(t, w, w + 0.5)));
+  }
+  return c;
+}
+function furWipe(t) {
+  const c = wipeAmt(t); if (c <= 0) return;
+  const R = 1.25 * (1 - c);
+  S.save(); S.globalAlpha = 1; S.globalCompositeOperation = 'source-over';
+  S.fillStyle = BG; S.beginPath(); S.rect(0, 0, W, H);
+  S.ellipse(W / 2, H / 2, Math.max(1, R * Math.SQRT2 * W / 2), Math.max(1, R * Math.SQRT2 * H / 2), 0, 0, TAU); S.fill('evenodd');
+  S.restore();
+  const vis = wipeRoots.filter((r) => r.d > R - 0.1);
+  strands(S, vis, t, { alpha: 0.8, lenMul: 0.5 + 0.9 * c, sway: 2.4, speed: 0.9, width: 1.6 });
+  // hidden eyes blinking inside the fur at full cover
+  if (c > 0.85) face(S, 960, 470, 0.7, { alpha: (c - 0.85) / 0.15 * 0.8, open: rnd(fr(t), 77) > 0.85 ? 0.1 : 1, mouth: false, col: PINK });
+}
+
 const SCENES = [[0, 3.0, s1], [3.0, 6.0, s2], [6.0, 9.6, s3a], [9.6, 11.4, s3b], [11.4, 15.4, s4], [15.4, 19.8, s5], [19.8, 23.8, s6], [23.8, 26.8, s7], [26.8, 99, s8]];
 
 // ---------------------------------------------------------------- post
@@ -819,6 +885,7 @@ function renderFrame(t) {
   S.save();
   for (const [a, b, fn] of SCENES) if (t >= a && t < b) { fn(t); break; }
   S.restore();
+  furWipe(t);
   S.globalAlpha = 1; S.globalCompositeOperation = 'source-over'; S.shadowBlur = 0;
   const f = fr(t), g = glitchAmt(t), off = 2 + g * 30;
   // RGB split
@@ -849,7 +916,6 @@ function renderFrame(t) {
   const flick = 0.05 * rnd(f, 3) + (rnd(f, 4) > 0.97 ? 0.3 : 0);
   out.fillStyle = `rgba(0,0,0,${flick})`; out.fillRect(0, 0, W, H);
   // fade in from black / CRT power-off at the end
-  if (t < 0.15) { out.fillStyle = `rgba(0,0,0,${1 - t / 0.15})`; out.fillRect(0, 0, W, H); }
   if (t > 29.45) {
     const p = seg(t, 29.45, 29.85);
     TR.globalCompositeOperation = 'copy'; TR.drawImage(cv, 0, 0);

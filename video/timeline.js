@@ -5,7 +5,16 @@
     DUR: 30,
     FPS: 60,
     // scene cuts / glitch spikes
-    CUTS: [3.0, 6.0, 9.6, 11.4, 12.6, 12.85, 15.4, 19.8, 23.8, 24.55, 25.3, 26.05, 26.8],
+    CUTS: [0.1, 3.0, 9.6, 12.6, 12.85, 23.8, 24.55, 25.3, 26.05, 26.8],
+    // creative transitions
+    WIPES: [6.0, 15.4, 19.8],          // fur grows over the whole screen, new scene appears beneath it
+    IRIS: { z0: 10.9, cut: 11.4, open: 11.85, node: 50 }, // dive into one eye's pupil -> next scene opens from the slit
+    // eye events (for blink sound design)
+    EYE_OPEN: 0.0,
+    BLINK1: 0.68,
+    SYNC_OPEN: 4.6,
+    SYNC_GAZE: [5.15, 5.55],
+    SYNC_BLINK: 5.62,
     TYPE1: { t0: 0.9, t1: 2.1, text: 'Blockchains love determinism.' },
     TYPE2: { t0: 6.15, t1: 6.75, text: 'But what happens when a contract needs to:' },
     // [time, x, y, click?]  (x,y = pointer hotspot)

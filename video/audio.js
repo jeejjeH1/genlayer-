@@ -24,7 +24,7 @@ const seg = (t, a, b) => Math.max(0, Math.min(1, (t - a) / (b - a)));
     let lvl = 0.55 + 0.45 * Math.sin(TAU * 0.07 * t);
     if (t > 11.4 && t < 15.4) lvl *= 1.5;
     if (t > 26.8) lvl *= 1.35;
-    const env = seg(t, 0, 1.2) * (1 - seg(t, 29.3, 29.9));
+    const env = seg(t, 0, 0.02) * (1 - seg(t, 29.3, 29.9));
     const d = 0.05 * (Math.sin(TAU * 41.2 * t) + 0.7 * Math.sin(TAU * 82.4 * t + 0.4 * Math.sin(TAU * 0.11 * t)) + 0.35 * Math.sin(TAU * 58.27 * t));
     const d2 = 0.05 * (Math.sin(TAU * 41.45 * t) + 0.7 * Math.sin(TAU * 82.9 * t) + 0.35 * Math.sin(TAU * 58.5 * t + 1));
     lp += 0.004 * (noise() - lp); lp2 += (0.002 + 0.002 * Math.sin(TAU * 0.13 * t)) * (noise() - lp2);
@@ -131,6 +131,84 @@ for (const [f, p] of [[164.81, -0.4], [196, 0.3], [246.94, -0.2], [369.99, 0.4],
 }
 // ---- CRT power-off zap
 for (let j = 0; j < SR * 0.35; j++) { const s = j / SR; put(at(29.45) + j, Math.sin(TAU * (900 - 2400 * s) * s) * Math.exp(-s * 9) * 0.12, 0, 0.3); }
+
+// ================= eyes: blink / open sounds =================
+// same hash as main.js so the chaotic blinks land on the exact frames
+function rndv(a, b = 0, c = 0) { const x = Math.sin(a * 12.9898 + b * 78.233 + c * 37.719) * 43758.5453; return x - Math.floor(x); }
+// wet eyelid: pitched "tock" + filtered moist noise + soft thud
+function blink(t0, amp, pan = 0, pitch = 1) {
+  let lp = 0, lp2 = 0, ph = 0;
+  for (let j = 0; j < SR * 0.09; j++) {
+    const s = j / SR;
+    ph += TAU * (1500 * pitch * Math.exp(-s * 90) + 380 * pitch) / SR;
+    const n = noise(); lp += 0.35 * (n - lp); lp2 += 0.08 * (lp - lp2);
+    const v = Math.sin(ph) * Math.exp(-s * 160) * 0.8 + (lp - lp2) * Math.exp(-s * 70) * 1.6 + Math.sin(TAU * 110 * pitch * s) * Math.exp(-s * 55) * 0.5;
+    put(at(t0) + j, v * amp, pan, 0.25);
+  }
+}
+// 100 eyes in perfect sync: a tight crowd of blinks, spread across the stereo field by column
+function crowd(t0, amp) {
+  for (let i = 0; i < 100; i++) blink(t0 + rndv(i, 91) * 0.006, amp / 45, ((i % 20) - 9.5) / 11, 0.92 + rndv(i, 92) * 0.16);
+}
+blink(TL.EYE_OPEN + 0.01, 0.55, 0, 0.7);
+blink(TL.BLINK1, 0.45, 0, 0.85); blink(TL.BLINK1 + 0.12, 0.3, 0, 0.95);
+crowd(TL.SYNC_OPEN, 1.0);
+crowd(TL.SYNC_BLINK, 0.8); crowd(TL.SYNC_BLINK + 0.14, 0.5);
+// synced gaze shifts: all eyes move together -> one soft swish
+TL.SYNC_GAZE.forEach((t0, k) => {
+  let lp = 0;
+  for (let j = 0; j < SR * 0.18; j++) { const s = j / SR; lp += (0.05 + 0.4 * s) * (noise() - lp); put(at(t0) + j, lp * Math.sin(Math.PI * s / 0.18) * 0.5, k ? -0.6 : 0.6, 0.2); }
+});
+// chaos: the SAME blink events the renderer draws, now out of sync, everywhere
+{
+  let n = 0;
+  for (let i = 0; i < 100; i++) {
+    const off = rndv(i, 9) * 3, col = i % 20;
+    for (let k = Math.floor(off); k <= Math.floor(1.8 * 6 + off); k++) {
+      const ts = TL.CHAOS + Math.max(0, (k - off) / 6);
+      if (ts >= TL.CHAOS + 1.8 || (i === TL.IRIS.node && ts > TL.IRIS.z0 - 0.25)) continue;
+      if (rndv(i, k, 5) > 0.82) {
+        const fade = 1 - seg(ts, TL.IRIS.z0, TL.IRIS.cut);
+        blink(ts + rndv(i, k, 33) * 0.02, 0.16 * fade, (col - 9.5) / 10, 0.7 + rndv(i, k, 34) * 0.7); n++;
+      }
+    }
+  }
+  console.log('chaos blinks', n);
+}
+// ================= transitions =================
+// fur wipe: growing rustle that peaks at the cut, then retracts
+for (const w of TL.WIPES) {
+  let lp = 0, hp = 0, prev = 0, crack = 0;
+  for (let j = 0; j < SR * 0.95; j++) {
+    const t = w - 0.45 + j / SR;
+    const c = t < w ? Math.pow(seg(t, w - 0.45, w), 1.6) : 1 - seg(t, w, w + 0.5);
+    const n = noise(); hp = n - prev; prev = n; lp += 0.25 * (hp - lp);
+    if (rand() < 0.004 * c) crack = 1;
+    crack *= 0.97;
+    put(at(w - 0.45) + j, (lp * 0.9 + noise() * crack * 0.6) * c * 0.32, Math.sin(t * 7) * 0.5, 0.35);
+  }
+  blink(w, 0.25, 0, 0.6);
+}
+// dive into the pupil: falling pitch + closing filter, then a deep wet "gulp" when we pass through
+{
+  const { z0, cut } = TL.IRIS; let ph = 0, lp = 0;
+  for (let j = 0; j < SR * (cut - z0); j++) {
+    const s = j / SR, p = s / (cut - z0);
+    ph += TAU * (520 * Math.pow(0.1, p)) / SR; lp += (0.2 * (1 - p) + 0.01) * (noise() - lp);
+    put(at(z0) + j, (Math.sin(ph) * 0.25 + lp * 0.6) * p * p, 0, 0.4);
+  }
+  blink(cut, 0.9, 0, 0.32);
+  let ph2 = 0;
+  for (let j = 0; j < SR * 0.8; j++) { const s = j / SR; ph2 += TAU * (45 + 40 * Math.exp(-s * 10)) / SR; put(at(cut) + j, Math.sin(ph2) * Math.exp(-s * 4) * 0.55, 0, 0.3); }
+}
+// opening hook: sub hit on frame 1
+{
+  let ph = 0, lp = 0;
+  for (let j = 0; j < SR * 1.2; j++) {
+    const s = j / SR; ph += TAU * (34 + 50 * Math.exp(-s * 14)) / SR; lp += 0.15 * (noise() - lp);
+    put(j, Math.sin(ph) * Math.exp(-s * 3) * 0.7 + lp * Math.exp(-s * 12) * 0.35, 0, 0.5);
+  }
+}
 
 // ---- reverb (Schroeder) on the send bus
 {
