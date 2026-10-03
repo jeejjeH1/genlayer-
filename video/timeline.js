@@ -3,7 +3,7 @@
 (function (root) {
   const TL = {
     DUR: 30,
-    FPS: 30,
+    FPS: 60,
     // scene cuts / glitch spikes
     CUTS: [3.0, 6.0, 9.6, 11.4, 12.6, 12.85, 15.4, 19.8, 23.8, 24.55, 25.3, 26.05, 26.8],
     TYPE1: { t0: 0.9, t1: 2.1, text: 'Blockchains love determinism.' },

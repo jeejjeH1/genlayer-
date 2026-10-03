@@ -42,12 +42,12 @@ function serve() {
       fs.writeFileSync(path.join(dir, `still_${t.toFixed(2)}.jpg`), Buffer.from(b64, 'base64'));
     }
   } else {
-    const outFile = path.join(ROOT, process.argv[2] || 'genvm.mp4');
+    const outFile = path.resolve(ROOT, process.argv[2] || 'genvm.mp4');
     const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error',
       '-f', 'image2pipe', '-framerate', String(TL.FPS), '-c:v', 'mjpeg', '-i', '-',
       '-i', path.join(ROOT, 'soundtrack.wav'),
       '-map', '0:v', '-map', '1:a',
-      '-c:v', 'libx264', '-preset', 'slow', '-crf', '16', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-r', String(TL.FPS),
+      '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-r', String(TL.FPS),
       '-c:a', 'aac', '-b:a', '256k', '-ar', '48000', '-shortest', '-movflags', '+faststart', outFile], { stdio: ['pipe', 'inherit', 'inherit'] });
     const total = TL.DUR * TL.FPS;
     const t0 = Date.now();

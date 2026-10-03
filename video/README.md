@@ -1,4 +1,4 @@
-# GenVM — 30s motion piece (16:9, 1920×1080, 30fps)
+# GenVM — 30s motion piece (16:9, 1920×1080, 60fps)
 
 A creepy, fur-and-glitch motion graphic for the GenVM / Intelligent Contracts Twitter post.
 Palette: `#ff87ff`, `#dc00ff`, `#00fff7`. Uses the GenLayer logo and the cat-bot character.

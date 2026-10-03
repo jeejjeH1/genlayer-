@@ -34,7 +34,8 @@ function rgba(hex, a) {
   return `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 }
 const pad = (n) => String(n).padStart(2, '0');
-const fr = (t) => Math.floor(t * FPS);
+// random glitch/flicker steps at 30Hz even when rendering at 60fps (smooth motion, no strobing)
+const fr = (t) => Math.floor(t * 30);
 function pulseAt(t, list, len) { let p = 0; for (const k of list) { const d = t - k; if (d >= 0 && d < len) p = Math.max(p, 1 - d / len); } return p; }
 function brandGrad(ctx, x0, x1, y = 0) {
   const g = ctx.createLinearGradient(x0, y, x1, y);
@@ -306,7 +307,7 @@ function hud(t, label, status) {
   S.moveTo(m, H - m - b); S.lineTo(m, H - m); S.lineTo(m + b, H - m);
   S.moveTo(W - m - b, H - m); S.lineTo(W - m, H - m); S.lineTo(W - m, H - m - b); S.stroke();
   S.fillStyle = rgba(PINK, 0.8); S.textAlign = 'left'; S.fillText('GENLAYER // GENVM', m + 16, m + 18);
-  const tc = `T+00:${pad(Math.floor(t))}:${pad(fr(t) % FPS)}`;
+  const tc = `T+00:${pad(Math.floor(t))}:${pad(Math.floor(t * FPS) % FPS)}`;
   S.textAlign = 'right'; S.fillText(tc, W - m - 16, m + 18);
   if (Math.floor(t * 2) % 2 === 0) { S.fillStyle = PINK; S.beginPath(); S.arc(W - m - 30 - S.measureText(tc).width, m + 18, 6, 0, TAU); S.fill(); }
   S.textAlign = 'left'; S.fillStyle = rgba(CYAN, 0.75); S.fillText(label, m + 16, H - m - 18);
