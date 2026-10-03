@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GenVM Clean Cut</title>
+<style>
+@font-face{font-family:'Sora';src:url(fonts/Sora-400.ttf);font-weight:400}
+@font-face{font-family:'Sora';src:url(fonts/Sora-600.ttf);font-weight:600}
+@font-face{font-family:'Sora';src:url(fonts/Sora-800.ttf);font-weight:800}
+@font-face{font-family:'JB';src:url(fonts/JetBrainsMono-500.ttf);font-weight:500}
+@font-face{font-family:'JB';src:url(fonts/JetBrainsMono-800.ttf);font-weight:800}
+html,body{margin:0;background:#000;height:100%;overflow:hidden}
+canvas{display:block;width:min(100vw,177.78vh);height:min(56.25vw,100vh);margin:auto;position:absolute;inset:0}
+#play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font:600 22px Sora,sans-serif;cursor:pointer;background:rgba(0,0,0,.35)}
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<div id="play" hidden>Click to play with sound</div>
+<audio id="snd" src="soundtrack.wav" preload="auto"></audio>
+<script src="timeline.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
